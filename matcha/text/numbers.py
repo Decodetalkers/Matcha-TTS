@@ -1,4 +1,4 @@
-""" from https://github.com/keithito/tacotron """
+"""from https://github.com/keithito/tacotron"""
 
 import re
 
@@ -13,15 +13,15 @@ _ordinal_re = re.compile(r"[0-9]+(st|nd|rd|th)")
 _number_re = re.compile(r"[0-9]+")
 
 
-def _remove_commas(m):
+def _remove_commas(m: re.Match):
     return m.group(1).replace(",", "")
 
 
-def _expand_decimal_point(m):
+def _expand_decimal_point(m: re.Match):
     return m.group(1).replace(".", " point ")
 
 
-def _expand_dollars(m):
+def _expand_dollars(m: re.Match):
     match = m.group(1)
     parts = match.split(".")
     if len(parts) > 2:
@@ -42,26 +42,31 @@ def _expand_dollars(m):
         return "zero dollars"
 
 
-def _expand_ordinal(m):
+def _expand_ordinal(m: re.Match):
     return _inflect.number_to_words(m.group(0))
 
 
-def _expand_number(m):
+def _expand_number(m: re.Match):
     num = int(m.group(0))
     if num > 1000 and num < 3000:
         if num == 2000:
             return "two thousand"
         elif num > 2000 and num < 2010:
-            return "two thousand " + _inflect.number_to_words(num % 100)
+            return "two thousand " + _inflect.number_to_words(num % 100)  # ty: ignore[unsupported-operator, invalid-argument-type]
         elif num % 100 == 0:
-            return _inflect.number_to_words(num // 100) + " hundred"
+            return _inflect.number_to_words(num // 100) + " hundred"  # ty: ignore[unsupported-operator, invalid-argument-type]
         else:
-            return _inflect.number_to_words(num, andword="", zero="oh", group=2).replace(", ", " ")
+            return _inflect.number_to_words(
+                num,
+                andword="",
+                zero="oh",
+                group=2,  # ty: ignore[invalid-argument-type]
+            ).replace(", ", " ")  # ty: ignore[unresolved-attribute]
     else:
-        return _inflect.number_to_words(num, andword="")
+        return _inflect.number_to_words(num, andword="")  # ty: ignore[invalid-argument-type]
 
 
-def normalize_numbers(text):
+def normalize_numbers(text: str):
     text = re.sub(_comma_number_re, _remove_commas, text)
     text = re.sub(_pounds_re, r"\1 pounds", text)
     text = re.sub(_dollars_re, _expand_dollars, text)

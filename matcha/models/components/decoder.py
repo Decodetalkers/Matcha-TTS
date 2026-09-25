@@ -1,5 +1,5 @@
 import math
-from typing import Optional
+from typing import Optional, Literal, Tuple
 
 import torch
 import torch.nn as nn  # pylint: disable=consider-using-from-import
@@ -12,12 +12,12 @@ from matcha.models.components.transformer import BasicTransformerBlock
 
 
 class SinusoidalPosEmb(torch.nn.Module):
-    def __init__(self, dim):
+    def __init__(self, dim: int):
         super().__init__()
         self.dim = dim
         assert self.dim % 2 == 0, "SinusoidalPosEmb requires dim to be even"
 
-    def forward(self, x, scale=1000):
+    def forward(self, x: torch.Tensor, scale: int = 1000):
         if x.ndim < 1:
             x = x.unsqueeze(0)
         device = x.device
@@ -30,7 +30,7 @@ class SinusoidalPosEmb(torch.nn.Module):
 
 
 class Block1D(torch.nn.Module):
-    def __init__(self, dim, dim_out, groups=8):
+    def __init__(self, dim: int, dim_out: int, groups: int = 8):
         super().__init__()
         self.block = torch.nn.Sequential(
             torch.nn.Conv1d(dim, dim_out, 3, padding=1),
@@ -38,22 +38,24 @@ class Block1D(torch.nn.Module):
             nn.Mish(),
         )
 
-    def forward(self, x, mask):
+    def forward(self, x: torch.Tensor, mask: torch.Tensor):
         output = self.block(x * mask)
         return output * mask
 
 
 class ResnetBlock1D(torch.nn.Module):
-    def __init__(self, dim, dim_out, time_emb_dim, groups=8):
+    def __init__(self, dim: int, dim_out: int, time_emb_dim: int, groups: int = 8):
         super().__init__()
-        self.mlp = torch.nn.Sequential(nn.Mish(), torch.nn.Linear(time_emb_dim, dim_out))
+        self.mlp = torch.nn.Sequential(
+            nn.Mish(), torch.nn.Linear(time_emb_dim, dim_out)
+        )
 
         self.block1 = Block1D(dim, dim_out, groups=groups)
         self.block2 = Block1D(dim_out, dim_out, groups=groups)
 
         self.res_conv = torch.nn.Conv1d(dim, dim_out, 1)
 
-    def forward(self, x, mask, time_emb):
+    def forward(self, x: torch.Tensor, mask: torch.Tensor, time_emb: torch.Tensor):
         h = self.block1(x, mask)
         h += self.mlp(time_emb).unsqueeze(-1)
         h = self.block2(h, mask)
@@ -62,11 +64,11 @@ class ResnetBlock1D(torch.nn.Module):
 
 
 class Downsample1D(nn.Module):
-    def __init__(self, dim):
+    def __init__(self, dim: int):
         super().__init__()
         self.conv = torch.nn.Conv1d(dim, dim, 3, 2, 1)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         return self.conv(x)
 
 
@@ -76,9 +78,9 @@ class TimestepEmbedding(nn.Module):
         in_channels: int,
         time_embed_dim: int,
         act_fn: str = "silu",
-        out_dim: int = None,
+        out_dim: Optional[int] = None,
         post_act_fn: Optional[str] = None,
-        cond_proj_dim=None,
+        cond_proj_dim: Optional[int] = None,
     ):
         super().__init__()
 
@@ -102,8 +104,9 @@ class TimestepEmbedding(nn.Module):
         else:
             self.post_act = get_activation(post_act_fn)
 
-    def forward(self, sample, condition=None):
+    def forward(self, sample: torch.Tensor, condition: Optional[torch.Tensor] = None):
         if condition is not None:
+            assert self.cond_proj is not None
             sample = sample + self.cond_proj(condition)
         sample = self.linear_1(sample)
 
@@ -131,7 +134,14 @@ class Upsample1D(nn.Module):
             number of output channels. Defaults to `channels`.
     """
 
-    def __init__(self, channels, use_conv=False, use_conv_transpose=True, out_channels=None, name="conv"):
+    def __init__(
+        self,
+        channels: int,
+        use_conv: bool = False,
+        use_conv_transpose: bool = True,
+        out_channels: Optional[int] = None,
+        name: str = "conv",
+    ):
         super().__init__()
         self.channels = channels
         self.out_channels = out_channels or channels
@@ -145,33 +155,35 @@ class Upsample1D(nn.Module):
         elif use_conv:
             self.conv = nn.Conv1d(self.channels, self.out_channels, 3, padding=1)
 
-    def forward(self, inputs):
+    def forward(self, inputs: torch.Tensor):
         assert inputs.shape[1] == self.channels
         if self.use_conv_transpose:
+            assert self.conv is not None
             return self.conv(inputs)
 
         outputs = F.interpolate(inputs, scale_factor=2.0, mode="nearest")
 
         if self.use_conv:
+            assert self.conv is not None
             outputs = self.conv(outputs)
 
         return outputs
 
 
 class ConformerWrapper(ConformerBlock):
-    def __init__(  # pylint: disable=useless-super-delegation
+    def __init__(
         self,
         *,
-        dim,
-        dim_head=64,
-        heads=8,
-        ff_mult=4,
-        conv_expansion_factor=2,
+        dim: int,
+        dim_head: int = 64,
+        heads: int = 8,
+        ff_mult: int = 4,
+        conv_expansion_factor: int = 2,
         conv_kernel_size=31,
-        attn_dropout=0,
-        ff_dropout=0,
-        conv_dropout=0,
-        conv_causal=False,
+        attn_dropout: float = 0,
+        ff_dropout: float = 0,
+        conv_dropout: float = 0,
+        conv_causal: bool = False,
     ):
         super().__init__(
             dim=dim,
@@ -193,7 +205,7 @@ class ConformerWrapper(ConformerBlock):
         encoder_hidden_states=None,
         encoder_attention_mask=None,
         timestep=None,
-    ):
+    ):  # ty: ignore[invalid-method-override]
         return super().forward(x=hidden_states, mask=attention_mask.bool())
 
 
@@ -235,7 +247,9 @@ class Decoder(nn.Module):
             input_channel = output_channel
             output_channel = channels[i]
             is_last = i == len(channels) - 1
-            resnet = ResnetBlock1D(dim=input_channel, dim_out=output_channel, time_emb_dim=time_embed_dim)
+            resnet = ResnetBlock1D(
+                dim=input_channel, dim_out=output_channel, time_emb_dim=time_embed_dim
+            )
             transformer_blocks = nn.ModuleList(
                 [
                     self.get_block(
@@ -250,16 +264,22 @@ class Decoder(nn.Module):
                 ]
             )
             downsample = (
-                Downsample1D(output_channel) if not is_last else nn.Conv1d(output_channel, output_channel, 3, padding=1)
+                Downsample1D(output_channel)
+                if not is_last
+                else nn.Conv1d(output_channel, output_channel, 3, padding=1)
             )
 
-            self.down_blocks.append(nn.ModuleList([resnet, transformer_blocks, downsample]))
+            self.down_blocks.append(
+                nn.ModuleList([resnet, transformer_blocks, downsample])
+            )
 
         for i in range(num_mid_blocks):
             input_channel = channels[-1]
             out_channels = channels[-1]
 
-            resnet = ResnetBlock1D(dim=input_channel, dim_out=output_channel, time_emb_dim=time_embed_dim)
+            resnet = ResnetBlock1D(
+                dim=input_channel, dim_out=output_channel, time_emb_dim=time_embed_dim
+            )
 
             transformer_blocks = nn.ModuleList(
                 [
@@ -316,7 +336,14 @@ class Decoder(nn.Module):
         # nn.init.normal_(self.final_proj.weight)
 
     @staticmethod
-    def get_block(block_type, dim, attention_head_dim, num_heads, dropout, act_fn):
+    def get_block(
+        block_type: Literal["conformer", "transformer"] | str,
+        dim: int,
+        attention_head_dim: int,
+        num_heads: int,
+        dropout: float,
+        act_fn: str,
+    ):
         if block_type == "conformer":
             block = ConformerWrapper(
                 dim=dim,
@@ -360,7 +387,15 @@ class Decoder(nn.Module):
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
 
-    def forward(self, x, mask, mu, t, spks=None, cond=None):
+    def forward(
+        self,
+        x: torch.Tensor,
+        mask: torch.Tensor,
+        mu: torch.Tensor,
+        t: torch.Tensor,
+        spks: Optional[torch.Tensor] = None,
+        cond=None,
+    ):
         """Forward pass of the UNet1DConditional model.
 
         Args:
@@ -389,7 +424,7 @@ class Decoder(nn.Module):
 
         hiddens = []
         masks = [mask]
-        for resnet, transformer_blocks, downsample in self.down_blocks:
+        for resnet, transformer_blocks, downsample in self.down_blocks:  # ty: ignore[not-iterable]
             mask_down = masks[-1]
             x = resnet(x, mask_down, t)
             x = rearrange(x, "b c t -> b t c")
@@ -409,7 +444,7 @@ class Decoder(nn.Module):
         masks = masks[:-1]
         mask_mid = masks[-1]
 
-        for resnet, transformer_blocks in self.mid_blocks:
+        for resnet, transformer_blocks in self.mid_blocks:  # ty: ignore[not-iterable]
             x = resnet(x, mask_mid, t)
             x = rearrange(x, "b c t -> b t c")
             mask_mid = rearrange(mask_mid, "b 1 t -> b t")
@@ -422,7 +457,7 @@ class Decoder(nn.Module):
             x = rearrange(x, "b t c -> b c t")
             mask_mid = rearrange(mask_mid, "b t -> b 1 t")
 
-        for resnet, transformer_blocks, upsample in self.up_blocks:
+        for resnet, transformer_blocks, upsample in self.up_blocks:  # ty: ignore[not-iterable]
             mask_up = masks.pop()
             x = resnet(pack([x, hiddens.pop()], "b * t")[0], mask_up, t)
             x = rearrange(x, "b c t -> b t c")

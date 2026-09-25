@@ -1,3 +1,4 @@
+from typing import Optional, Tuple, List
 from abc import ABC
 
 import torch
@@ -12,10 +13,10 @@ log = get_pylogger(__name__)
 class BASECFM(torch.nn.Module, ABC):
     def __init__(
         self,
-        n_feats,
+        n_feats: int,
         cfm_params,
-        n_spks=1,
-        spk_emb_dim=128,
+        n_spks: int = 1,
+        spk_emb_dim: int = 128,
     ):
         super().__init__()
         self.n_feats = n_feats
@@ -30,7 +31,15 @@ class BASECFM(torch.nn.Module, ABC):
         self.estimator = None
 
     @torch.inference_mode()
-    def forward(self, mu, mask, n_timesteps, temperature=1.0, spks=None, cond=None):
+    def forward(
+        self,
+        mu: torch.Tensor,
+        mask: torch.Tensor,
+        n_timesteps: int,
+        temperature: float = 1.0,
+        spks: Optional[torch.Tensor] = None,
+        cond=None,
+    ) -> torch.Tensor:
         """Forward diffusion
 
         Args:
@@ -50,9 +59,19 @@ class BASECFM(torch.nn.Module, ABC):
         """
         z = torch.randn_like(mu) * temperature
         t_span = torch.linspace(0, 1, n_timesteps + 1, device=mu.device)
-        return self.solve_euler(z, t_span=t_span, mu=mu, mask=mask, spks=spks, cond=cond)
+        return self.solve_euler(
+            z, t_span=t_span, mu=mu, mask=mask, spks=spks, cond=cond
+        )
 
-    def solve_euler(self, x, t_span, mu, mask, spks, cond):
+    def solve_euler(
+        self,
+        x: torch.Tensor,
+        t_span: torch.Tensor,
+        mu: torch.Tensor,
+        mask: torch.Tensor,
+        spks: Optional[torch.Tensor],
+        cond,
+    ) -> torch.Tensor:
         """
         Fixed euler solver for ODEs.
         Args:
@@ -71,10 +90,10 @@ class BASECFM(torch.nn.Module, ABC):
 
         # I am storing this because I can later plot it by putting a debugger here and saving it to a file
         # Or in future might add like a return_all_steps flag
-        sol = []
+        sol: List[torch.Tensor] = []
 
         for step in range(1, len(t_span)):
-            dphi_dt = self.estimator(x, mask, mu, t, spks, cond)
+            dphi_dt = self.estimator(x, mask, mu, t, spks, cond)  # ty: ignore[call-non-callable]
 
             x = x + dt * dphi_dt
             t = t + dt
@@ -84,7 +103,14 @@ class BASECFM(torch.nn.Module, ABC):
 
         return sol[-1]
 
-    def compute_loss(self, x1, mask, mu, spks=None, cond=None):
+    def compute_loss(
+        self,
+        x1: torch.Tensor,
+        mask: torch.Tensor,
+        mu: torch.Tensor,
+        spks: Optional[torch.Tensor] = None,
+        cond=None,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Computes diffusion loss
 
         Args:
@@ -112,14 +138,24 @@ class BASECFM(torch.nn.Module, ABC):
         y = (1 - (1 - self.sigma_min) * t) * z + t * x1
         u = x1 - (1 - self.sigma_min) * z
 
-        loss = F.mse_loss(self.estimator(y, mask, mu, t.squeeze(), spks), u, reduction="sum") / (
-            torch.sum(mask) * u.shape[1]
-        )
+        loss = F.mse_loss(
+            self.estimator(y, mask, mu, t.squeeze(), spks),  # ty: ignore[call-non-callable]
+            u,
+            reduction="sum",
+        ) / (torch.sum(mask) * u.shape[1])
         return loss, y
 
 
 class CFM(BASECFM):
-    def __init__(self, in_channels, out_channel, cfm_params, decoder_params, n_spks=1, spk_emb_dim=64):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channel: int,
+        cfm_params,
+        decoder_params,
+        n_spks: int = 1,
+        spk_emb_dim: int = 64,
+    ):
         super().__init__(
             n_feats=in_channels,
             cfm_params=cfm_params,
@@ -129,4 +165,6 @@ class CFM(BASECFM):
 
         in_channels = in_channels + (spk_emb_dim if n_spks > 1 else 0)
         # Just change the architecture of the estimator here
-        self.estimator = Decoder(in_channels=in_channels, out_channels=out_channel, **decoder_params)
+        self.estimator = Decoder(
+            in_channels=in_channels, out_channels=out_channel, **decoder_params
+        )

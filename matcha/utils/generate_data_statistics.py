@@ -4,6 +4,7 @@ when needed.
 
 Parameters from hparam.py will be used
 """
+
 import argparse
 import json
 import os
@@ -22,7 +23,9 @@ from matcha.utils.logging_utils import pylogger
 log = pylogger.get_pylogger(__name__)
 
 
-def compute_data_statistics(data_loader: torch.utils.data.DataLoader, out_channels: int):
+def compute_data_statistics(
+    data_loader: torch.utils.data.DataLoader, out_channels: int
+):
     """Generate data mean and standard deviation helpful in data normalisation
 
     Args:
@@ -42,9 +45,11 @@ def compute_data_statistics(data_loader: torch.utils.data.DataLoader, out_channe
         total_mel_sq_sum += torch.sum(torch.pow(mels, 2))
 
     data_mean = total_mel_sum / (total_mel_len * out_channels)
-    data_std = torch.sqrt((total_mel_sq_sum / (total_mel_len * out_channels)) - torch.pow(data_mean, 2))
+    data_std = torch.sqrt(
+        (total_mel_sq_sum / (total_mel_len * out_channels)) - torch.pow(data_mean, 2)  # ty: ignore[no-matching-overload]
+    )
 
-    return {"mel_mean": data_mean.item(), "mel_std": data_std.item()}
+    return {"mel_mean": data_mean.item(), "mel_std": data_std.item()}  # ty: ignore[unresolved-attribute]
 
 
 def main():
@@ -82,7 +87,9 @@ def main():
         sys.exit(1)
 
     with initialize(version_base="1.3", config_path="../../configs/data"):
-        cfg = compose(config_name=args.input_config, return_hydra_config=True, overrides=[])
+        cfg = compose(
+            config_name=args.input_config, return_hydra_config=True, overrides=[]
+        )
 
     root_path = rootutils.find_root(search_from=__file__, indicator=".project-root")
 
@@ -92,11 +99,15 @@ def main():
         cfg["data_statistics"] = None
         cfg["seed"] = 1234
         cfg["batch_size"] = args.batch_size
-        cfg["train_filelist_path"] = str(os.path.join(root_path, cfg["train_filelist_path"]))
-        cfg["valid_filelist_path"] = str(os.path.join(root_path, cfg["valid_filelist_path"]))
+        cfg["train_filelist_path"] = str(
+            os.path.join(root_path, cfg["train_filelist_path"])
+        )
+        cfg["valid_filelist_path"] = str(
+            os.path.join(root_path, cfg["valid_filelist_path"])
+        )
         cfg["load_durations"] = False
 
-    text_mel_datamodule = TextMelDataModule(**cfg)
+    text_mel_datamodule = TextMelDataModule(**cfg)  # ty: ignore[invalid-argument-type]
     text_mel_datamodule.setup()
     data_loader = text_mel_datamodule.train_dataloader()
     log.info("Dataloader loaded! Now computing stats...")

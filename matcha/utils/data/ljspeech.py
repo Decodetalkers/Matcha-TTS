@@ -31,7 +31,13 @@ def decision():
 def get_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-s", "--save-dir", type=str, default=None, help="Place to store the downloaded zip files")
+    parser.add_argument(
+        "-s",
+        "--save-dir",
+        type=str,
+        default=None,
+        help="Place to store the downloaded zip files",
+    )
     parser.add_argument(
         "output_dir",
         type=str,

@@ -2,6 +2,7 @@
 This is a base lightning module that can be used to train a model.
 The benefit of this abstraction is that all the logic outside of model definition can be reused for different models.
 """
+
 import inspect
 from abc import ABC
 from typing import Any, Dict
@@ -28,32 +29,35 @@ class BaseLightningClass(LightningModule, ABC):
         self.register_buffer("mel_std", torch.tensor(data_statistics["mel_std"]))
 
     def configure_optimizers(self) -> Any:
-        optimizer = self.hparams.optimizer(params=self.parameters())
-        if self.hparams.scheduler not in (None, {}):
+        optimizer = self.hparams.optimizer(params=self.parameters())  # ty: ignore[unresolved-attribute]
+        if self.hparams.scheduler not in (None, {}):  # ty: ignore[unresolved-attribute]
             scheduler_args = {}
             # Manage last epoch for exponential schedulers
-            if "last_epoch" in inspect.signature(self.hparams.scheduler.scheduler).parameters:
+            if (
+                "last_epoch"
+                in inspect.signature(self.hparams.scheduler.scheduler).parameters  # ty: ignore[unresolved-attribute]
+            ):
                 if hasattr(self, "ckpt_loaded_epoch"):
                     current_epoch = self.ckpt_loaded_epoch - 1
                 else:
                     current_epoch = -1
 
             scheduler_args.update({"optimizer": optimizer})
-            scheduler = self.hparams.scheduler.scheduler(**scheduler_args)
+            scheduler = self.hparams.scheduler.scheduler(**scheduler_args)  # ty: ignore[unresolved-attribute]
             scheduler.last_epoch = current_epoch
             return {
                 "optimizer": optimizer,
                 "lr_scheduler": {
                     "scheduler": scheduler,
-                    "interval": self.hparams.scheduler.lightning_args.interval,
-                    "frequency": self.hparams.scheduler.lightning_args.frequency,
+                    "interval": self.hparams.scheduler.lightning_args.interval,  # ty: ignore[unresolved-attribute]
+                    "frequency": self.hparams.scheduler.lightning_args.frequency,  # ty: ignore[unresolved-attribute]
                     "name": "learning_rate",
                 },
             }
 
         return {"optimizer": optimizer}
 
-    def get_losses(self, batch):
+    def get_losses(self, batch: Dict[str, torch.Tensor]):
         x, x_lengths = batch["x"], batch["x_lengths"]
         y, y_lengths = batch["y"], batch["y_lengths"]
         spks = batch["spks"]
@@ -167,12 +171,12 @@ class BaseLightningClass(LightningModule, ABC):
 
     def on_validation_end(self) -> None:
         if self.trainer.is_global_zero:
-            one_batch = next(iter(self.trainer.val_dataloaders))
+            one_batch = next(iter(self.trainer.val_dataloaders))  # ty: ignore[no-matching-overload]
             if self.current_epoch == 0:
                 log.debug("Plotting original samples")
                 for i in range(2):
                     y = one_batch["y"][i].unsqueeze(0).to(self.device)
-                    self.logger.experiment.add_image(
+                    self.logger.experiment.add_image(  # ty: ignore[unresolved-attribute]
                         f"original/{i}",
                         plot_tensor(y.squeeze().cpu()),
                         self.current_epoch,
@@ -183,23 +187,29 @@ class BaseLightningClass(LightningModule, ABC):
             for i in range(2):
                 x = one_batch["x"][i].unsqueeze(0).to(self.device)
                 x_lengths = one_batch["x_lengths"][i].unsqueeze(0).to(self.device)
-                spks = one_batch["spks"][i].unsqueeze(0).to(self.device) if one_batch["spks"] is not None else None
-                output = self.synthesise(x[:, :x_lengths], x_lengths, n_timesteps=10, spks=spks)
+                spks = (
+                    one_batch["spks"][i].unsqueeze(0).to(self.device)
+                    if one_batch["spks"] is not None
+                    else None
+                )
+                output = self.synthesise(
+                    x[:, :x_lengths], x_lengths, n_timesteps=10, spks=spks
+                )  # ty: ignore[call-non-callable]
                 y_enc, y_dec = output["encoder_outputs"], output["decoder_outputs"]
                 attn = output["attn"]
-                self.logger.experiment.add_image(
+                self.logger.experiment.add_image(  # ty: ignore[unresolved-attribute]
                     f"generated_enc/{i}",
                     plot_tensor(y_enc.squeeze().cpu()),
                     self.current_epoch,
                     dataformats="HWC",
                 )
-                self.logger.experiment.add_image(
+                self.logger.experiment.add_image(  # ty: ignore[unresolved-attribute]
                     f"generated_dec/{i}",
                     plot_tensor(y_dec.squeeze().cpu()),
                     self.current_epoch,
                     dataformats="HWC",
                 )
-                self.logger.experiment.add_image(
+                self.logger.experiment.add_image(  # ty: ignore[unresolved-attribute]
                     f"alignment/{i}",
                     plot_tensor(attn.squeeze().cpu()),
                     self.current_epoch,
@@ -207,4 +217,6 @@ class BaseLightningClass(LightningModule, ABC):
                 )
 
     def on_before_optimizer_step(self, optimizer):
-        self.log_dict({f"grad_norm/{k}": v for k, v in grad_norm(self, norm_type=2).items()})
+        self.log_dict(
+            {f"grad_norm/{k}": v for k, v in grad_norm(self, norm_type=2).items()}
+        )

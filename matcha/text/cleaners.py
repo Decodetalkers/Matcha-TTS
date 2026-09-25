@@ -1,4 +1,4 @@
-""" from https://github.com/keithito/tacotron
+"""from https://github.com/keithito/tacotron
 
 Cleaners are transformations that run over the input text at both training and eval time.
 
@@ -15,13 +15,14 @@ import logging
 import re
 
 import phonemizer
+import phonemizer.backend
 from unidecode import unidecode
 
 # To avoid excessive logging we set the log level of the phonemizer package to Critical
 critical_logger = logging.getLogger("phonemizer")
 critical_logger.setLevel(logging.CRITICAL)
 
-# Intializing the phonemizer globally significantly reduces the speed
+# Initializing the phonemizer globally significantly reduces the speed
 # now the phonemizer is not initialising at every call
 # Might be less flexible, but it is much-much faster
 global_phonemizer = phonemizer.backend.EspeakBackend(
@@ -65,36 +66,36 @@ _abbreviations = [
 ]
 
 
-def expand_abbreviations(text):
+def expand_abbreviations(text: str) -> str:
     for regex, replacement in _abbreviations:
         text = re.sub(regex, replacement, text)
     return text
 
 
-def lowercase(text):
+def lowercase(text: str) -> str:
     return text.lower()
 
 
-def remove_brackets(text):
+def remove_brackets(text: str) -> str:
     return re.sub(_brackets_re, "", text)
 
 
-def collapse_whitespace(text):
+def collapse_whitespace(text: str) -> str:
     return re.sub(_whitespace_re, " ", text)
 
 
-def convert_to_ascii(text):
+def convert_to_ascii(text: str) -> str:
     return unidecode(text)
 
 
-def basic_cleaners(text):
+def basic_cleaners(text: str) -> str:
     """Basic pipeline that lowercases and collapses whitespace without transliteration."""
     text = lowercase(text)
     text = collapse_whitespace(text)
     return text
 
 
-def transliteration_cleaners(text):
+def transliteration_cleaners(text: str) -> str:
     """Pipeline for non-English text that transliterates to ASCII."""
     text = convert_to_ascii(text)
     text = lowercase(text)
@@ -102,7 +103,7 @@ def transliteration_cleaners(text):
     return text
 
 
-def english_cleaners2(text):
+def english_cleaners2(text: str) -> str:
     """Pipeline for English text, including abbreviation expansion. + punctuation + stress"""
     text = convert_to_ascii(text)
     text = lowercase(text)
@@ -114,7 +115,7 @@ def english_cleaners2(text):
     return phonemes
 
 
-def ipa_simplifier(text):
+def ipa_simplifier(text: str) -> str:
     replacements = [
         ("ɐ", "ə"),
         ("ˈə", "ə"),

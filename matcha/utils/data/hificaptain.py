@@ -36,7 +36,13 @@ LICENCE = "CC BY-NC-SA 4.0"
 def get_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-s", "--save-dir", type=str, default=None, help="Place to store the downloaded zip files")
+    parser.add_argument(
+        "-s",
+        "--save-dir",
+        type=str,
+        default=None,
+        help="Place to store the downloaded zip files",
+    )
     parser.add_argument(
         "-r",
         "--skip-resampling",
@@ -45,7 +51,12 @@ def get_args():
         help="Skip resampling the data (from 48 to 22.05)",
     )
     parser.add_argument(
-        "-l", "--language", type=str, choices=["en-US", "ja-JP"], default="en-US", help="The language to download"
+        "-l",
+        "--language",
+        type=str,
+        choices=["en-US", "ja-JP"],
+        default="en-US",
+        help="The language to download",
     )
     parser.add_argument(
         "-g",
@@ -66,7 +77,7 @@ def get_args():
     return parser.parse_args()
 
 
-def process_text(infile, outpath: Path):
+def process_text(infile: str, outpath: Path):
     outmode = "w"
     if infile.endswith("dev.txt"):
         outfile = outpath / "valid.txt"
@@ -87,7 +98,7 @@ def process_text(infile, outpath: Path):
             of.write(f"{outfile}|{rest}\n")
 
 
-def process_files(zipfile, outpath, resample=True):
+def process_files(zipfile: Path | str, outpath: Path, resample: bool = True):
     with tempfile.TemporaryDirectory() as tmpdirname:
         for filename in tqdm(_extract_zip(zipfile, tmpdirname)):
             if not filename.startswith(tmpdirname):
@@ -99,7 +110,9 @@ def process_files(zipfile, outpath, resample=True):
                 outfile = str(outpath / filepart)
                 arr, sr = torchaudio.load(filename)
                 if resample:
-                    arr = torchaudio.functional.resample(arr, orig_freq=sr, new_freq=22050)
+                    arr = torchaudio.functional.resample(
+                        arr, orig_freq=sr, new_freq=22050
+                    )
                 torchaudio.save(outfile, arr, 22050)
             else:
                 continue
@@ -136,7 +149,7 @@ def main():
         zipname = URL.rsplit("/", maxsplit=1)[-1]
         zipfile = save_dir / zipname
         if not zipfile.exists():
-            download_url_to_file(URL, zipfile, progress=True)
+            download_url_to_file(URL, zipfile, progress=True)  # ty: ignore[invalid-argument-type]
         process_files(zipfile, outpath, resample)
     else:
         with tempfile.NamedTemporaryFile(suffix=".zip", delete=True) as zf:

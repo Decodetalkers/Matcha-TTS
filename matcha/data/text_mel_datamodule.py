@@ -177,7 +177,14 @@ class TextMelDataset(torch.utils.data.Dataset):
 
         durations = self.get_durations(filepath, text) if self.load_durations else None
 
-        return {"x": text, "y": mel, "spk": spk, "filepath": filepath, "x_text": cleaned_text, "durations": durations}
+        return {
+            "x": text,
+            "y": mel,
+            "spk": spk,
+            "filepath": filepath,
+            "x_text": cleaned_text,
+            "durations": durations,
+        }
 
     def get_durations(self, filepath, text):
         filepath = Path(filepath)
@@ -192,7 +199,9 @@ class TextMelDataset(torch.utils.data.Dataset):
                 f"Tried loading the durations but durations didn't exist at {dur_loc}, make sure you've generate the durations first using: python matcha/utils/get_durations_from_trained_model.py \n"
             ) from e
 
-        assert len(durs) == len(text), f"Length of durations {len(durs)} and text {len(text)} do not match"
+        assert len(durs) == len(text), (
+            f"Length of durations {len(durs)} and text {len(text)} do not match"
+        )
 
         return durs
 
@@ -210,7 +219,9 @@ class TextMelDataset(torch.utils.data.Dataset):
             self.f_max,
             center=False,
         ).squeeze()
-        mel = normalize(mel, self.data_parameters["mel_mean"], self.data_parameters["mel_std"])
+        mel = normalize(
+            mel, self.data_parameters["mel_mean"], self.data_parameters["mel_std"]
+        )
         return mel
 
     def get_text(self, text, add_blank=True):

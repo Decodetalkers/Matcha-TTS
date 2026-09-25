@@ -30,23 +30,27 @@ def log_hyperparameters(object_dict: Dict[str, Any]) -> None:
         log.warning("Logger not found! Skipping hyperparameter logging...")
         return
 
-    hparams["model"] = cfg["model"]
+    hparams["model"] = cfg["model"]  # ty: ignore[invalid-argument-type, not-subscriptable]
 
     # save number of model parameters
     hparams["model/params/total"] = sum(p.numel() for p in model.parameters())
-    hparams["model/params/trainable"] = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    hparams["model/params/non_trainable"] = sum(p.numel() for p in model.parameters() if not p.requires_grad)
+    hparams["model/params/trainable"] = sum(
+        p.numel() for p in model.parameters() if p.requires_grad
+    )
+    hparams["model/params/non_trainable"] = sum(
+        p.numel() for p in model.parameters() if not p.requires_grad
+    )
 
-    hparams["data"] = cfg["data"]
-    hparams["trainer"] = cfg["trainer"]
+    hparams["data"] = cfg["data"]  # ty: ignore[invalid-argument-type, not-subscriptable]
+    hparams["trainer"] = cfg["trainer"]  # ty: ignore[invalid-argument-type, not-subscriptable]
 
-    hparams["callbacks"] = cfg.get("callbacks")
-    hparams["extras"] = cfg.get("extras")
+    hparams["callbacks"] = cfg.get("callbacks")  # ty: ignore[unresolved-attribute]
+    hparams["extras"] = cfg.get("extras")  # ty: ignore[unresolved-attribute]
 
-    hparams["task_name"] = cfg.get("task_name")
-    hparams["tags"] = cfg.get("tags")
-    hparams["ckpt_path"] = cfg.get("ckpt_path")
-    hparams["seed"] = cfg.get("seed")
+    hparams["task_name"] = cfg.get("task_name")  # ty: ignore[unresolved-attribute]
+    hparams["tags"] = cfg.get("tags")  # ty: ignore[unresolved-attribute]
+    hparams["ckpt_path"] = cfg.get("ckpt_path")  # ty: ignore[unresolved-attribute]
+    hparams["seed"] = cfg.get("seed")  # ty: ignore[unresolved-attribute]
 
     # send hparams to all loggers
     for logger in trainer.loggers:

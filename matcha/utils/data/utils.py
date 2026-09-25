@@ -13,7 +13,9 @@ from typing import Any, List, Optional, Union
 _LG = logging.getLogger(__name__)
 
 
-def _extract_tar(from_path: Union[str, Path], to_path: Optional[str] = None, overwrite: bool = False) -> List[str]:
+def _extract_tar(
+    from_path: Union[str, Path], to_path: Optional[str] = None, overwrite: bool = False
+) -> List[str]:
     if type(from_path) is Path:
         from_path = str(Path)
 
@@ -34,7 +36,9 @@ def _extract_tar(from_path: Union[str, Path], to_path: Optional[str] = None, ove
         return files
 
 
-def _extract_zip(from_path: Union[str, Path], to_path: Optional[str] = None, overwrite: bool = False) -> List[str]:
+def _extract_zip(
+    from_path: Union[str, Path], to_path: Optional[str] = None, overwrite: bool = False
+) -> List[str]:
     if type(from_path) is Path:
         from_path = str(Path)
 
