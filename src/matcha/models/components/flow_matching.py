@@ -1,5 +1,6 @@
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Protocol, Any
 from abc import ABC
+from collections.abc import Mapping
 
 import torch
 import torch.nn.functional as F
@@ -10,11 +11,21 @@ from matcha.utils.pylogger import get_pylogger
 log = get_pylogger(__name__)
 
 
+class CFMParam(Protocol):
+    # NOTE: I do not know what it is
+    solver: Any
+
+    # the sigma_min
+    @property
+    def sigma_min(self) -> Optional[float]:
+        pass
+
+
 class BASECFM(torch.nn.Module, ABC):
     def __init__(
         self,
         n_feats: int,
-        cfm_params,
+        cfm_params: CFMParam,
         n_spks: int = 1,
         spk_emb_dim: int = 128,
     ):
@@ -23,7 +34,7 @@ class BASECFM(torch.nn.Module, ABC):
         self.n_spks = n_spks
         self.spk_emb_dim = spk_emb_dim
         self.solver = cfm_params.solver
-        if hasattr(cfm_params, "sigma_min"):
+        if cfm_params.sigma_min is not None:
             self.sigma_min = cfm_params.sigma_min
         else:
             self.sigma_min = 1e-4
@@ -103,6 +114,9 @@ class BASECFM(torch.nn.Module, ABC):
 
         return sol[-1]
 
+    # This part use the new loss function of CFM, but a better one
+    # So CFM is a loss function
+    # In the past, people prefer to use CNFs,
     def compute_loss(
         self,
         x1: torch.Tensor,
@@ -151,8 +165,8 @@ class CFM(BASECFM):
         self,
         in_channels: int,
         out_channel: int,
-        cfm_params,
-        decoder_params,
+        cfm_params: CFMParam,
+        decoder_params: Mapping[str, Any],
         n_spks: int = 1,
         spk_emb_dim: int = 64,
     ):

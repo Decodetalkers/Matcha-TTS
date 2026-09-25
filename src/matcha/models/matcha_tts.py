@@ -4,8 +4,7 @@ import math
 import random
 
 import torch
-
-import matcha.utils.monotonic_align as monotonic_align  # pylint: disable=consider-using-from-import
+import monotonic_alignment_search as monotonic_align
 from matcha import utils
 from matcha.models.baselightningmodule import BaseLightningClass
 from matcha.models.components.flow_matching import CFM
@@ -37,6 +36,8 @@ class MatchaTTS(BaseLightningClass):  # 🍵
         scheduler=None,
         prior_loss=True,
         use_precomputed_durations=False,
+        lr=None,
+        weight_decay=None
     ):
         super().__init__()
 

@@ -57,10 +57,10 @@ def _expand_number(m: re.Match):
             return _inflect.number_to_words(num // 100) + " hundred"  # ty: ignore[unsupported-operator, invalid-argument-type]
         else:
             return _inflect.number_to_words(
-                num,
+                num,  # ty: ignore[invalid-argument-type]
                 andword="",
                 zero="oh",
-                group=2,  # ty: ignore[invalid-argument-type]
+                group=2,
             ).replace(", ", " ")  # ty: ignore[unresolved-attribute]
     else:
         return _inflect.number_to_words(num, andword="")  # ty: ignore[invalid-argument-type]

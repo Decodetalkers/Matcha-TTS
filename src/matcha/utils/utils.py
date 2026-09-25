@@ -135,11 +135,19 @@ def intersperse(lst, item):
     return result
 
 
-def save_figure_to_numpy(fig):
-    data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep="")
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    return data
+def save_figure_to_numpy(fig: plt.Figure):
+    buffer = fig.canvas.buffer_rgba()  # ty:ignore[unresolved-attribute]
 
+    # この時点では、画像の各ピクセルが1次元の配列として格納されている。
+    one_line_img: np.ndarray = np.frombuffer(buffer, dtype=np.uint8)
+
+    # 画像の大きさを取得する。
+    w, h = fig.canvas.get_width_height()
+    c = len(one_line_img) // (w * h)  # channel 数
+
+    # numpy 配列に変換する
+    img = one_line_img.reshape(h, w, c)
+    return img
 
 def plot_tensor(tensor):
     plt.style.use("default")
@@ -215,7 +223,7 @@ def assert_model_downloaded(checkpoint_path, url, use_wget=True):
     print(f"[-] Model not found at {checkpoint_path}! Will download it")
     checkpoint_path = str(checkpoint_path)
     if not use_wget:
-        gdown.download(url=url, output=checkpoint_path, quiet=False, fuzzy=True)
+        gdown.download(url=url, output=checkpoint_path, quiet=False)
     else:
         wget.download(url=url, out=checkpoint_path)
 

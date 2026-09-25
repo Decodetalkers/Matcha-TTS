@@ -58,56 +58,56 @@ class TextMelDataModule(LightningDataModule):
         # load and split datasets only if not loaded already
 
         self.trainset = TextMelDataset(  # pylint: disable=attribute-defined-outside-init
-            self.hparams.train_filelist_path,
-            self.hparams.n_spks,
-            self.hparams.cleaners,
-            self.hparams.add_blank,
-            self.hparams.n_fft,
-            self.hparams.n_feats,
-            self.hparams.sample_rate,
-            self.hparams.hop_length,
-            self.hparams.win_length,
-            self.hparams.f_min,
-            self.hparams.f_max,
-            self.hparams.data_statistics,
-            self.hparams.seed,
-            self.hparams.load_durations,
+            self.hparams.train_filelist_path,  # ty: ignore[unresolved-attribute]
+            self.hparams.n_spks,  # ty: ignore[unresolved-attribute]
+            self.hparams.cleaners,  # ty: ignore[unresolved-attribute]
+            self.hparams.add_blank,  # ty: ignore[unresolved-attribute]
+            self.hparams.n_fft,  # ty: ignore[unresolved-attribute]
+            self.hparams.n_feats,  # ty: ignore[unresolved-attribute]
+            self.hparams.sample_rate,  # ty: ignore[unresolved-attribute]
+            self.hparams.hop_length,  # ty: ignore[unresolved-attribute]
+            self.hparams.win_length,  # ty: ignore[unresolved-attribute]
+            self.hparams.f_min,  # ty: ignore[unresolved-attribute]
+            self.hparams.f_max,  # ty: ignore[unresolved-attribute]
+            self.hparams.data_statistics,  # ty: ignore[unresolved-attribute]
+            self.hparams.seed,  # ty: ignore[unresolved-attribute]
+            self.hparams.load_durations,  # ty: ignore[unresolved-attribute]
         )
         self.validset = TextMelDataset(  # pylint: disable=attribute-defined-outside-init
-            self.hparams.valid_filelist_path,
-            self.hparams.n_spks,
-            self.hparams.cleaners,
-            self.hparams.add_blank,
-            self.hparams.n_fft,
-            self.hparams.n_feats,
-            self.hparams.sample_rate,
-            self.hparams.hop_length,
-            self.hparams.win_length,
-            self.hparams.f_min,
-            self.hparams.f_max,
-            self.hparams.data_statistics,
-            self.hparams.seed,
-            self.hparams.load_durations,
+            self.hparams.valid_filelist_path,  # ty: ignore[unresolved-attribute]
+            self.hparams.n_spks,  # ty: ignore[unresolved-attribute]
+            self.hparams.cleaners,  # ty: ignore[unresolved-attribute]
+            self.hparams.add_blank,  # ty: ignore[unresolved-attribute]
+            self.hparams.n_fft,  # ty: ignore[unresolved-attribute]
+            self.hparams.n_feats,  # ty: ignore[unresolved-attribute]
+            self.hparams.sample_rate,  # ty: ignore[unresolved-attribute]
+            self.hparams.hop_length,  # ty: ignore[unresolved-attribute]
+            self.hparams.win_length,  # ty: ignore[unresolved-attribute]
+            self.hparams.f_min,  # ty: ignore[unresolved-attribute]
+            self.hparams.f_max,  # ty: ignore[unresolved-attribute]
+            self.hparams.data_statistics,  # ty: ignore[unresolved-attribute]
+            self.hparams.seed,  # ty: ignore[unresolved-attribute]
+            self.hparams.load_durations,  # ty: ignore[unresolved-attribute]
         )
 
     def train_dataloader(self):
         return DataLoader(
             dataset=self.trainset,
-            batch_size=self.hparams.batch_size,
-            num_workers=self.hparams.num_workers,
-            pin_memory=self.hparams.pin_memory,
+            batch_size=self.hparams.batch_size,  # ty: ignore[unresolved-attribute]
+            num_workers=self.hparams.num_workers,  # ty: ignore[unresolved-attribute]
+            pin_memory=self.hparams.pin_memory,  # ty: ignore[unresolved-attribute]
             shuffle=True,
-            collate_fn=TextMelBatchCollate(self.hparams.n_spks),
+            collate_fn=TextMelBatchCollate(self.hparams.n_spks),  # ty: ignore[unresolved-attribute]
         )
 
     def val_dataloader(self):
         return DataLoader(
             dataset=self.validset,
-            batch_size=self.hparams.batch_size,
-            num_workers=self.hparams.num_workers,
-            pin_memory=self.hparams.pin_memory,
+            batch_size=self.hparams.batch_size,  # ty: ignore[unresolved-attribute]
+            num_workers=self.hparams.num_workers,  # ty: ignore[unresolved-attribute]
+            pin_memory=self.hparams.pin_memory,  # ty: ignore[unresolved-attribute]
             shuffle=False,
-            collate_fn=TextMelBatchCollate(self.hparams.n_spks),
+            collate_fn=TextMelBatchCollate(self.hparams.n_spks),  # ty: ignore[unresolved-attribute]
         )
 
     def teardown(self, stage: Optional[str] = None):

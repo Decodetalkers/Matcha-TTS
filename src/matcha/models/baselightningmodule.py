@@ -29,7 +29,7 @@ class BaseLightningClass(LightningModule, ABC):
         self.register_buffer("mel_std", torch.tensor(data_statistics["mel_std"]))
 
     def configure_optimizers(self) -> Any:
-        optimizer = self.hparams.optimizer(params=self.parameters())  # ty: ignore[unresolved-attribute]
+        optimizer = torch.optim.Adam(params=self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)  # ty: ignore[unresolved-attribute]
         if self.hparams.scheduler not in (None, {}):  # ty: ignore[unresolved-attribute]
             scheduler_args = {}
             # Manage last epoch for exponential schedulers

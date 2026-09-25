@@ -212,18 +212,18 @@ class ConformerWrapper(ConformerBlock):
 class Decoder(nn.Module):
     def __init__(
         self,
-        in_channels,
-        out_channels,
-        channels=(256, 256),
-        dropout=0.05,
-        attention_head_dim=64,
-        n_blocks=1,
-        num_mid_blocks=2,
-        num_heads=4,
-        act_fn="snake",
-        down_block_type="transformer",
-        mid_block_type="transformer",
-        up_block_type="transformer",
+        in_channels: int,
+        out_channels: int,
+        channels: Tuple[int, ...] = (256, 256),
+        dropout: float = 0.05,
+        attention_head_dim: int = 64,
+        n_blocks: int = 1,
+        num_mid_blocks: int = 2,
+        num_heads: int = 4,
+        act_fn: str = "snake",
+        down_block_type: str = "transformer",
+        mid_block_type: str = "transformer",
+        up_block_type: str = "transformer",
     ):
         super().__init__()
         channels = tuple(channels)
@@ -343,7 +343,7 @@ class Decoder(nn.Module):
         num_heads: int,
         dropout: float,
         act_fn: str,
-    ):
+    ) -> nn.Module:
         if block_type == "conformer":
             block = ConformerWrapper(
                 dim=dim,
@@ -395,7 +395,7 @@ class Decoder(nn.Module):
         t: torch.Tensor,
         spks: Optional[torch.Tensor] = None,
         cond=None,
-    ):
+    ) -> torch.Tensor:
         """Forward pass of the UNet1DConditional model.
 
         Args:

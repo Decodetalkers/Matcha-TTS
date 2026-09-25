@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 import lightning
+import lightning.fabric.utilities.exceptions
 import numpy as np
 import rootutils
 import torch
