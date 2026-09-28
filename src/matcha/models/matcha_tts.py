@@ -36,8 +36,7 @@ class MatchaTTS(BaseLightningClass):  # 🍵
         scheduler=None,
         prior_loss=True,
         use_precomputed_durations=False,
-        lr=None,
-        weight_decay=None
+        **kwargs
     ):
         super().__init__()
 

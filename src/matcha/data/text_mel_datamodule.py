@@ -23,25 +23,7 @@ def parse_filelist(filelist_path, split_char="|"):
 class TextMelDataModule(LightningDataModule):
     def __init__(  # pylint: disable=unused-argument
         self,
-        name,
-        train_filelist_path,
-        valid_filelist_path,
-        batch_size,
-        num_workers,
-        pin_memory,
-        cleaners,
-        add_blank,
-        n_spks,
-        n_fft,
-        n_feats,
-        sample_rate,
-        hop_length,
-        win_length,
-        f_min,
-        f_max,
-        data_statistics,
-        seed,
-        load_durations,
+        **kwargs
     ):
         super().__init__()
 

@@ -89,6 +89,7 @@ class BaseLightningClass(LightningModule, ABC):
             prog_bar=True,
             logger=True,
             sync_dist=True,
+            batch_size=self.hparams.get('batch_size')
         )
 
         self.log(
@@ -98,6 +99,7 @@ class BaseLightningClass(LightningModule, ABC):
             on_epoch=True,
             logger=True,
             sync_dist=True,
+            batch_size=self.hparams.get('batch_size')
         )
         self.log(
             "sub_loss/train_prior_loss",
@@ -106,6 +108,7 @@ class BaseLightningClass(LightningModule, ABC):
             on_epoch=True,
             logger=True,
             sync_dist=True,
+            batch_size=self.hparams.get('batch_size')
         )
         self.log(
             "sub_loss/train_diff_loss",
@@ -114,6 +117,7 @@ class BaseLightningClass(LightningModule, ABC):
             on_epoch=True,
             logger=True,
             sync_dist=True,
+            batch_size=self.hparams.get('batch_size')
         )
 
         total_loss = sum(loss_dict.values())
@@ -125,6 +129,7 @@ class BaseLightningClass(LightningModule, ABC):
             logger=True,
             prog_bar=True,
             sync_dist=True,
+            batch_size=self.hparams.get('batch_size')
         )
 
         return {"loss": total_loss, "log": loss_dict}
@@ -138,6 +143,7 @@ class BaseLightningClass(LightningModule, ABC):
             on_epoch=True,
             logger=True,
             sync_dist=True,
+            batch_size=self.hparams.get('batch_size')
         )
         self.log(
             "sub_loss/val_prior_loss",
@@ -146,6 +152,7 @@ class BaseLightningClass(LightningModule, ABC):
             on_epoch=True,
             logger=True,
             sync_dist=True,
+            batch_size=self.hparams.get('batch_size')
         )
         self.log(
             "sub_loss/val_diff_loss",
@@ -154,6 +161,7 @@ class BaseLightningClass(LightningModule, ABC):
             on_epoch=True,
             logger=True,
             sync_dist=True,
+            batch_size=self.hparams.get('batch_size')
         )
 
         total_loss = sum(loss_dict.values())
@@ -165,6 +173,7 @@ class BaseLightningClass(LightningModule, ABC):
             logger=True,
             prog_bar=True,
             sync_dist=True,
+            batch_size=self.hparams.get('batch_size')
         )
 
         return total_loss
