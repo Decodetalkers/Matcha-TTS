@@ -4,7 +4,7 @@ import warnings
 from importlib.util import find_spec
 from math import ceil
 from pathlib import Path
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable, Dict, Tuple, List
 
 import gdown
 import matplotlib.pyplot as plt
@@ -128,7 +128,7 @@ def get_metric_value(metric_dict: Dict[str, Any], metric_name: str) -> float:
     return metric_value
 
 
-def intersperse(lst, item):
+def intersperse[T](lst: List[T], item: T) -> List[T]:
     # Adds blank symbol
     result = [item] * (len(lst) * 2 + 1)
     result[1::2] = lst

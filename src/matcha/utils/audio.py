@@ -3,48 +3,48 @@ import torch
 import torch.utils.data
 from librosa.filters import mel as librosa_mel_fn
 from scipy.io.wavfile import read
-
+from typing import Tuple, Dict
 MAX_WAV_VALUE = 32768.0
 
 
-def load_wav(full_path):
+def load_wav(full_path: str) -> Tuple[np.ndarray, int]:
     sampling_rate, data = read(full_path)
     return data, sampling_rate
 
 
-def dynamic_range_compression(x, C=1, clip_val=1e-5):
+def dynamic_range_compression(x: np.ndarray, C: int=1, clip_val: float=1e-5) -> np.ndarray:
     return np.log(np.clip(x, a_min=clip_val, a_max=None) * C)
 
 
-def dynamic_range_decompression(x, C=1):
+def dynamic_range_decompression(x: np.ndarray, C: int=1) -> np.ndarray:
     return np.exp(x) / C
 
 
-def dynamic_range_compression_torch(x, C=1, clip_val=1e-5):
+def dynamic_range_compression_torch(x: torch.Tensor, C: int=1, clip_val: float=1e-5) -> torch.Tensor:
     return torch.log(torch.clamp(x, min=clip_val) * C)
 
 
-def dynamic_range_decompression_torch(x, C=1):
+def dynamic_range_decompression_torch(x: torch.Tensor, C: int=1) -> torch.Tensor:
     return torch.exp(x) / C
 
 
-def spectral_normalize_torch(magnitudes):
+def spectral_normalize_torch(magnitudes: torch.Tensor) -> torch.Tensor:
     output = dynamic_range_compression_torch(magnitudes)
     return output
 
 
-def spectral_de_normalize_torch(magnitudes):
+def spectral_de_normalize_torch(magnitudes: torch.Tensor) -> torch.Tensor:
     output = dynamic_range_decompression_torch(magnitudes)
     return output
 
 
-mel_basis = {}
-hann_window = {}
+mel_basis: Dict[str, torch.Tensor] = {}
+hann_window: Dict[str, torch.Tensor] = {}
 
 
 def mel_spectrogram(
-    y, n_fft, num_mels, sampling_rate, hop_size, win_size, fmin, fmax, center=False
-):
+        y: torch.Tensor, n_fft: int, num_mels: int, sampling_rate: int, hop_size: int, win_size: int, fmin: float, fmax: float, center: bool=False
+) -> torch.Tensor:
     if torch.min(y) < -1.0:
         print("min value is ", torch.min(y))
     if torch.max(y) > 1.0:

@@ -1335,7 +1335,7 @@ requires-dist = [
     { name = "hydra-core", specifier = ">=1.4.0.dev10" },
     { name = "inflect", specifier = ">=7.5.0" },
     { name = "librosa", specifier = ">=1.0.0" },
-    { name = "lightning", specifier = ">=2.6.5" },
+    { name = "lightning", specifier = ">=2.6.6" },
     { name = "matplotlib", specifier = ">=3.11.1" },
     { name = "monotonic-alignment-search", extras = ["cuda"], specifier = ">=0.2.1" },
     { name = "omegaconf", specifier = ">=2.3.1" },

@@ -1,6 +1,8 @@
+from matcha.text import Cleaner
+from omegaconf.resolvers.oc import dict
 import random
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 import numpy as np
 import torch
@@ -8,20 +10,19 @@ import torchaudio as ta
 from lightning import LightningDataModule
 from torch.utils.data.dataloader import DataLoader
 
-from matcha.text import text_to_sequence
 from matcha.utils.audio import mel_spectrogram
 from matcha.utils.model import fix_len_compatibility, normalize
 from matcha.utils.utils import intersperse
 
 
-def parse_filelist(filelist_path, split_char="|"):
+def parse_filelist(filelist_path: str, split_char: str="|") -> List[List[str]]:
     with open(filelist_path, encoding="utf-8") as f:
         filepaths_and_text = [line.strip().split(split_char) for line in f]
     return filepaths_and_text
 
 
 class TextMelDataModule(LightningDataModule):
-    def __init__(  # pylint: disable=unused-argument
+    def __init__(
         self,
         **kwargs
     ):
@@ -39,10 +40,11 @@ class TextMelDataModule(LightningDataModule):
         """
         # load and split datasets only if not loaded already
 
+        self.cleaner = Cleaner(self.hparams.cleaners)  # ty: ignore[unresolved-attribute]
         self.trainset = TextMelDataset(  # pylint: disable=attribute-defined-outside-init
             self.hparams.train_filelist_path,  # ty: ignore[unresolved-attribute]
             self.hparams.n_spks,  # ty: ignore[unresolved-attribute]
-            self.hparams.cleaners,  # ty: ignore[unresolved-attribute]
+            self.cleaner,
             self.hparams.add_blank,  # ty: ignore[unresolved-attribute]
             self.hparams.n_fft,  # ty: ignore[unresolved-attribute]
             self.hparams.n_feats,  # ty: ignore[unresolved-attribute]
@@ -58,7 +60,7 @@ class TextMelDataModule(LightningDataModule):
         self.validset = TextMelDataset(  # pylint: disable=attribute-defined-outside-init
             self.hparams.valid_filelist_path,  # ty: ignore[unresolved-attribute]
             self.hparams.n_spks,  # ty: ignore[unresolved-attribute]
-            self.hparams.cleaners,  # ty: ignore[unresolved-attribute]
+            self.cleaner,
             self.hparams.add_blank,  # ty: ignore[unresolved-attribute]
             self.hparams.n_fft,  # ty: ignore[unresolved-attribute]
             self.hparams.n_feats,  # ty: ignore[unresolved-attribute]
@@ -92,8 +94,13 @@ class TextMelDataModule(LightningDataModule):
             collate_fn=TextMelBatchCollate(self.hparams.n_spks),  # ty: ignore[unresolved-attribute]
         )
 
-    def teardown(self, stage: Optional[str] = None):
-        """Clean up after fit or test."""
+    def on_train_epoch_end(self) -> None:
+        self.cleaner.deload()
+
+    def on_train_epoch_start(self) -> None:
+        self.cleaner.reload()
+
+    def teardown(self, stage: str):
         pass  # pylint: disable=unnecessary-pass
 
     def state_dict(self):
@@ -108,24 +115,24 @@ class TextMelDataModule(LightningDataModule):
 class TextMelDataset(torch.utils.data.Dataset):
     def __init__(
         self,
-        filelist_path,
-        n_spks,
-        cleaners,
-        add_blank=True,
-        n_fft=1024,
-        n_mels=80,
-        sample_rate=22050,
-        hop_length=256,
-        win_length=1024,
-        f_min=0.0,
-        f_max=8000,
-        data_parameters=None,
-        seed=None,
+        filelist_path: str,
+        n_spks: int,
+        cleaner: Cleaner,
+        add_blank: bool=True,
+        n_fft:int=1024,
+        n_mels: int=80,
+        sample_rate: int=22050,
+        hop_length: int=256,
+        win_length: int=1024,
+        f_min: float=0.0,
+        f_max: float=8000,
+        data_parameters: Optional[Dict[str,str]]=None,
+        seed: Optional[int]=None,
         load_durations=False,
     ):
+        self.cleaner =cleaner;
         self.filepaths_and_text = parse_filelist(filelist_path)
         self.n_spks = n_spks
-        self.cleaners = cleaners
         self.add_blank = add_blank
         self.n_fft = n_fft
         self.n_mels = n_mels
@@ -143,7 +150,7 @@ class TextMelDataset(torch.utils.data.Dataset):
         random.seed(seed)
         random.shuffle(self.filepaths_and_text)
 
-    def get_datapoint(self, filepath_and_text):
+    def get_datapoint(self, filepath_and_text: List[str]):
         if self.n_spks > 1:
             filepath, spk, text = (
                 filepath_and_text[0],
@@ -168,8 +175,8 @@ class TextMelDataset(torch.utils.data.Dataset):
             "durations": durations,
         }
 
-    def get_durations(self, filepath, text):
-        filepath = Path(filepath)
+    def get_durations(self, o_filepath: str, text: str):
+        filepath = Path(o_filepath)
         data_dir, name = filepath.parent.parent, filepath.stem
 
         try:
@@ -187,7 +194,7 @@ class TextMelDataset(torch.utils.data.Dataset):
 
         return durs
 
-    def get_mel(self, filepath):
+    def get_mel(self, filepath: str):
         audio, sr = ta.load(filepath)
         assert sr == self.sample_rate
         mel = mel_spectrogram(
@@ -206,14 +213,14 @@ class TextMelDataset(torch.utils.data.Dataset):
         )
         return mel
 
-    def get_text(self, text, add_blank=True):
-        text_norm, cleaned_text = text_to_sequence(text, self.cleaners)
+    def get_text(self, text: str, add_blank: bool=True):
+        text_norm, cleaned_text = self.cleaner.text_to_sequence(text)
         if self.add_blank:
             text_norm = intersperse(text_norm, 0)
         text_norm = torch.IntTensor(text_norm)
         return text_norm, cleaned_text
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int):
         datapoint = self.get_datapoint(self.filepaths_and_text[index])
         return datapoint
 
@@ -222,7 +229,7 @@ class TextMelDataset(torch.utils.data.Dataset):
 
 
 class TextMelBatchCollate:
-    def __init__(self, n_spks):
+    def __init__(self, n_spks: int):
         self.n_spks = n_spks
 
     def __call__(self, batch):

@@ -52,7 +52,7 @@ def compute_durations(
     data_loader: torch.utils.data.DataLoader,
     model: nn.Module,
     device: torch.device,
-    output_folder,
+    output_folder: Path,
 ):
     """Generate durations from the model for each datapoint and save it in a folder
 

@@ -416,10 +416,10 @@ class Decoder(nn.Module):
         t = self.time_embeddings(t)
         t = self.time_mlp(t)
 
-        x = pack([x, mu], "b * t")[0]
+        x = pack([x, mu], "b * t")[0]  # ty: ignore[invalid-argument-type]
 
         if spks is not None:
-            spks = repeat(spks, "b c -> b c t", t=x.shape[-1])
+            spks = repeat(spks, "b c -> b c t", t=x.shape[-1])  # ty: ignore[invalid-argument-type]
             x = pack([x, spks], "b * t")[0]
 
         hiddens = []

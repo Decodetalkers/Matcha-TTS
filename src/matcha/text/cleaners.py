@@ -11,29 +11,81 @@ hyperparameter. Some cleaners are English-specific. You'll typically want to use
      the symbols in symbols.py to match your data).
 """
 
+from typing import Protocol
 import logging
 import re
+import threading
 
 import phonemizer
 import phonemizer.backend
 from unidecode import unidecode
 
-# To avoid excessive logging we set the log level of the phonemizer package to Critical
-critical_logger = logging.getLogger("phonemizer")
-critical_logger.setLevel(logging.CRITICAL)
+_worker_phonemizer = None
 
-# Initializing the phonemizer globally significantly reduces the speed
-# now the phonemizer is not initialising at every call
-# Might be less flexible, but it is much-much faster
-global_phonemizer = phonemizer.backend.EspeakBackend(
-    language="en-us",
-    preserve_punctuation=True,
-    with_stress=True,
-    language_switch="remove-flags",
-    logger=critical_logger,
-)
+class ProCleaners(Protocol):
+    def clean(self, text: str) -> str:
+        pass
+    def deload(self):
+        pass
+    def reload(self):
+        pass
 
+class EnglishCleaner2(ProCleaners):
+    def __init__(self):
+        self.critical_logger = logging.getLogger("phonemizer")
+        self.critical_logger.setLevel(logging.CRITICAL)
+        # FIXME: The EspeakApi will copy itself after it is forked.
+        # But it will clean itself if the reference is dead
+        self.phonemizer = phonemizer.backend.EspeakBackend(
+            language="en-us",
+            preserve_punctuation=True,
+            with_stress=True,
+            language_switch="remove-flags",
+            logger=self.critical_logger
+        )
+    def clean(self, text: str) -> str:
+        """Pipeline for English text, including abbreviation expansion. + punctuation + stress"""
+        text = convert_to_ascii(text)
+        text = lowercase(text)
+        text = expand_abbreviations(text)
+        assert self.phonemizer is not None
+        phonemes = self.phonemizer.phonemize([text], strip=True, njobs=1)[0]
+        # Added in some cases espeak is not removing brackets
+        phonemes = remove_brackets(phonemes)
+        phonemes = collapse_whitespace(phonemes)
+        return phonemes
+    def deload(self):
+        del self.phonemizer
+        self.phonemizer = None
+    def reload(self):
+        if self.phonemizer is not None:
+            del self.phonemizer
+            self.phonemizer = None
+        self.phonemizer = phonemizer.backend.EspeakBackend(
+            language="en-us",
+            preserve_punctuation=True,
+            with_stress=True,
+            language_switch="remove-flags",
+            logger=self.critical_logger
+        )
+class BasicCleaners(ProCleaners):
+    def __init__(self):
+        pass
+    def clean(self, text: str) -> str:
+        """Basic pipeline that lowercases and collapses whitespace without transliteration."""
+        text = lowercase(text)
+        text = collapse_whitespace(text)
+        return text
 
+class TransliterationCleaners(ProCleaners):
+    def __init__(self):
+        pass
+    def clean(self, text: str) -> str:
+        """Pipeline for non-English text that transliterates to ASCII."""
+        text = convert_to_ascii(text)
+        text = lowercase(text)
+        text = collapse_whitespace(text)
+        return text
 # Regular expression matching whitespace:
 _whitespace_re = re.compile(r"\s+")
 
@@ -86,33 +138,6 @@ def collapse_whitespace(text: str) -> str:
 
 def convert_to_ascii(text: str) -> str:
     return unidecode(text)
-
-
-def basic_cleaners(text: str) -> str:
-    """Basic pipeline that lowercases and collapses whitespace without transliteration."""
-    text = lowercase(text)
-    text = collapse_whitespace(text)
-    return text
-
-
-def transliteration_cleaners(text: str) -> str:
-    """Pipeline for non-English text that transliterates to ASCII."""
-    text = convert_to_ascii(text)
-    text = lowercase(text)
-    text = collapse_whitespace(text)
-    return text
-
-
-def english_cleaners2(text: str) -> str:
-    """Pipeline for English text, including abbreviation expansion. + punctuation + stress"""
-    text = convert_to_ascii(text)
-    text = lowercase(text)
-    text = expand_abbreviations(text)
-    phonemes = global_phonemizer.phonemize([text], strip=True, njobs=1)[0]
-    # Added in some cases espeak is not removing brackets
-    phonemes = remove_brackets(phonemes)
-    phonemes = collapse_whitespace(phonemes)
-    return phonemes
 
 
 def ipa_simplifier(text: str) -> str:

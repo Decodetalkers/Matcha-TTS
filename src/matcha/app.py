@@ -362,7 +362,7 @@ def main():
                 label="Multi Speaker Examples",
             )
 
-        model_type.change(  # ty: ignore[unresolved-attribute]
+        model_type.change(
             lambda x: gr.update(interactive=False),
             inputs=[synth_btn],
             outputs=[synth_btn],
@@ -379,7 +379,7 @@ def main():
             ],
         )
 
-        synth_btn.click(  # ty: ignore[unresolved-attribute]
+        synth_btn.click(
             fn=process_text_gradio,
             inputs=[
                 text,
