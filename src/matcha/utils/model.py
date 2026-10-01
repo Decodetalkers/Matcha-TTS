@@ -1,18 +1,21 @@
 """from https://github.com/jaywalnut310/glow-tts"""
+
 from typing import Optional, List
 
 import numpy as np
 import torch
 
 
-def sequence_mask(length: torch.Tensor, max_length: Optional[torch.Tensor | int]=None):
+def sequence_mask(
+    length: torch.Tensor, max_length: Optional[torch.Tensor | int] = None
+):
     if max_length is None:
         max_length = length.max()
     x = torch.arange(int(max_length), dtype=length.dtype, device=length.device)
     return x.unsqueeze(0) < length.unsqueeze(1)
 
 
-def fix_len_compatibility(length: torch.Tensor, num_downsamplings_in_unet: int=2):
+def fix_len_compatibility(length: torch.Tensor, num_downsamplings_in_unet: int = 2):
     factor = torch.scalar_tensor(2).pow(num_downsamplings_in_unet)
     length = (length / factor).ceil() * factor
     if not torch.onnx.is_in_onnx_export():

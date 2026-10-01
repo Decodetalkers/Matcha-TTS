@@ -14,7 +14,9 @@ _LG = logging.getLogger(__name__)
 
 
 def _extract_tar(
-    from_path: Union[str, Path], to_path: Optional[str] = None, overwrite: bool = False
+    from_path: Union[str, Path],
+    to_path: Optional[Union[str, Path]] = None,
+    overwrite: bool = False,
 ) -> List[str]:
     if type(from_path) is Path:
         from_path = str(Path)

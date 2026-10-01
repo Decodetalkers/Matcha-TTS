@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Protocol, List, Any
 import datetime as dt
 import math
 import random
@@ -16,6 +16,8 @@ from matcha.utils.model import (
     generate_path,
     sequence_mask,
 )
+from collections.abc import Mapping
+from .common import EncoderConfig, CFMParam, DataStatisTics
 
 log = utils.get_pylogger(__name__)
 
@@ -23,20 +25,20 @@ log = utils.get_pylogger(__name__)
 class MatchaTTS(BaseLightningClass):  # 🍵
     def __init__(
         self,
-        n_vocab,
-        n_spks,
-        spk_emb_dim,
-        n_feats,
-        encoder,
-        decoder,
-        cfm,
-        data_statistics,
-        out_size,
+        n_vocab: int,
+        n_spks: int,
+        spk_emb_dim: int,
+        n_feats: int,
+        encoder: EncoderConfig,
+        decoder: Mapping[str, Any],
+        cfm: CFMParam,
+        data_statistics: Optional[DataStatisTics],
+        out_size: Optional[int],
         optimizer=None,
         scheduler=None,
-        prior_loss=True,
-        use_precomputed_durations=False,
-        **kwargs
+        prior_loss: bool = True,
+        use_precomputed_durations: bool = False,
+        **kwargs,
     ):
         super().__init__()
 
@@ -80,7 +82,7 @@ class MatchaTTS(BaseLightningClass):  # 🍵
         x_lengths: torch.Tensor,
         n_timesteps: int,
         temperature: float = 1.0,
-        spks: Optional[bool] = None,
+        spks: Optional[torch.Tensor] = None,
         length_scale: float = 1.0,
     ):
         """
@@ -96,7 +98,7 @@ class MatchaTTS(BaseLightningClass):  # 🍵
                 shape: (batch_size,)
             n_timesteps (int): number of steps to use for reverse diffusion in decoder.
             temperature (float, optional): controls variance of terminal distribution.
-            spks (bool, optional): speaker ids.
+            spks (torch.Tensor, optional): speaker ids.
                 shape: (batch_size,)
             length_scale (float, optional): controls speech pace.
                 Increase value to slow down generated speech and vice versa.
@@ -121,8 +123,9 @@ class MatchaTTS(BaseLightningClass):  # 🍵
         t = dt.datetime.now()
 
         if self.n_spks > 1:
+            assert spks is not None
             # Get speaker embedding
-            spks = self.spk_emb(spks.long())  # ty: ignore[unresolved-attribute]
+            spks = self.spk_emb(spks.long())
 
         # Get encoder_outputs `mu_x` and log-scaled token durations `logw`
         mu_x, logw, x_mask = self.encoder(x, x_lengths, spks)

@@ -185,7 +185,7 @@ class RotaryPositionalEmbeddings(nn.Module):
         * `x` is the Tensor at the head of a key or a query with shape `[seq_len, batch_size, n_heads, d]`
         """
         # Cache $\cos$ and $\sin$ values
-        x = rearrange(x, "b h t d -> t b h d")
+        x = rearrange(x, "b h t d -> t b h d")  # ty: ignore[invalid-argument-type]
 
         self._build_cache(x)
 
@@ -203,7 +203,7 @@ class RotaryPositionalEmbeddings(nn.Module):
             )
         )
 
-        return rearrange(torch.cat((x_rope, x_pass), dim=-1), "t b h d -> b h t d")
+        return rearrange(torch.cat((x_rope, x_pass), dim=-1), "t b h d -> b h t d")  # ty: ignore[invalid-argument-type]
 
 
 class MultiHeadAttention(nn.Module):
@@ -267,9 +267,9 @@ class MultiHeadAttention(nn.Module):
         mask: Optional[torch.Tensor] = None,
     ):
         b, d, t_s, t_t = (*key.size(), query.size(2))
-        query = rearrange(query, "b (h c) t-> b h t c", h=self.n_heads)
-        key = rearrange(key, "b (h c) t-> b h t c", h=self.n_heads)
-        value = rearrange(value, "b (h c) t-> b h t c", h=self.n_heads)
+        query = rearrange(query, "b (h c) t-> b h t c", h=self.n_heads)  # ty: ignore[invalid-argument-type]
+        key = rearrange(key, "b (h c) t-> b h t c", h=self.n_heads)  # ty: ignore[invalid-argument-type]
+        value = rearrange(value, "b (h c) t-> b h t c", h=self.n_heads)  # ty: ignore[invalid-argument-type]
 
         query = self.query_rotary_pe(query)
         key = self.key_rotary_pe(key)

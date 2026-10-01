@@ -10,18 +10,12 @@ from matcha.utils.pylogger import get_pylogger
 
 log = get_pylogger(__name__)
 
-
-class CFMParam(Protocol):
-    # NOTE: I do not know what it is
-    solver: Any
-
-    # the sigma_min
-    @property
-    def sigma_min(self) -> Optional[float]:
-        pass
+from ..common import CFMParam
 
 
 class BASECFM(torch.nn.Module, ABC):
+    estimator: torch.nn.Module
+
     def __init__(
         self,
         n_feats: int,
@@ -38,8 +32,6 @@ class BASECFM(torch.nn.Module, ABC):
             self.sigma_min = cfm_params.sigma_min
         else:
             self.sigma_min = 1e-4
-
-        self.estimator = None
 
     @torch.inference_mode()
     def forward(
@@ -104,8 +96,7 @@ class BASECFM(torch.nn.Module, ABC):
         sol: List[torch.Tensor] = []
 
         for step in range(1, len(t_span)):
-            dphi_dt = self.estimator(x, mask, mu, t, spks, cond)  # ty: ignore[call-non-callable]
-
+            dphi_dt = self.estimator(x, mask, mu, t, spks, cond)
             x = x + dt * dphi_dt
             t = t + dt
             sol.append(x)
@@ -153,7 +144,7 @@ class BASECFM(torch.nn.Module, ABC):
         u = x1 - (1 - self.sigma_min) * z
 
         loss = F.mse_loss(
-            self.estimator(y, mask, mu, t.squeeze(), spks),  # ty: ignore[call-non-callable]
+            self.estimator(y, mask, mu, t.squeeze(), spks),
             u,
             reduction="sum",
         ) / (torch.sum(mask) * u.shape[1])

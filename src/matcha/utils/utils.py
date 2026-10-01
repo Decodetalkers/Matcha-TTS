@@ -149,6 +149,7 @@ def save_figure_to_numpy(fig: plt.Figure):
     img = one_line_img.reshape(h, w, c)
     return img
 
+
 def plot_tensor(tensor):
     plt.style.use("default")
     fig, ax = plt.subplots(figsize=(12, 3))

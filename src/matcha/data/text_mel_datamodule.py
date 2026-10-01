@@ -15,17 +15,14 @@ from matcha.utils.model import fix_len_compatibility, normalize
 from matcha.utils.utils import intersperse
 
 
-def parse_filelist(filelist_path: str, split_char: str="|") -> List[List[str]]:
+def parse_filelist(filelist_path: str, split_char: str = "|") -> List[List[str]]:
     with open(filelist_path, encoding="utf-8") as f:
         filepaths_and_text = [line.strip().split(split_char) for line in f]
     return filepaths_and_text
 
 
 class TextMelDataModule(LightningDataModule):
-    def __init__(
-        self,
-        **kwargs
-    ):
+    def __init__(self, **kwargs):
         super().__init__()
 
         # this line allows to access init params with 'self.hparams' attribute
@@ -94,11 +91,15 @@ class TextMelDataModule(LightningDataModule):
             collate_fn=TextMelBatchCollate(self.hparams.n_spks),  # ty: ignore[unresolved-attribute]
         )
 
-    def on_train_epoch_end(self) -> None:
-        self.cleaner.deload()
-
-    def on_train_epoch_start(self) -> None:
-        self.cleaner.reload()
+    def test_dataloader(self):
+        return DataLoader(
+            dataset=self.validset,
+            batch_size=self.hparams.batch_size,  # ty: ignore[unresolved-attribute]
+            num_workers=self.hparams.num_workers,  # ty: ignore[unresolved-attribute]
+            pin_memory=self.hparams.pin_memory,  # ty: ignore[unresolved-attribute]
+            shuffle=False,
+            collate_fn=TextMelBatchCollate(self.hparams.n_spks),  # ty: ignore[unresolved-attribute]
+        )
 
     def teardown(self, stage: str):
         pass  # pylint: disable=unnecessary-pass
@@ -118,19 +119,19 @@ class TextMelDataset(torch.utils.data.Dataset):
         filelist_path: str,
         n_spks: int,
         cleaner: Cleaner,
-        add_blank: bool=True,
-        n_fft:int=1024,
-        n_mels: int=80,
-        sample_rate: int=22050,
-        hop_length: int=256,
-        win_length: int=1024,
-        f_min: float=0.0,
-        f_max: float=8000,
-        data_parameters: Optional[Dict[str,str]]=None,
-        seed: Optional[int]=None,
+        add_blank: bool = True,
+        n_fft: int = 1024,
+        n_mels: int = 80,
+        sample_rate: int = 22050,
+        hop_length: int = 256,
+        win_length: int = 1024,
+        f_min: float = 0.0,
+        f_max: float = 8000,
+        data_parameters: Optional[Dict[str, str]] = None,
+        seed: Optional[int] = None,
         load_durations=False,
     ):
-        self.cleaner =cleaner;
+        self.cleaner = cleaner
         self.filepaths_and_text = parse_filelist(filelist_path)
         self.n_spks = n_spks
         self.add_blank = add_blank
@@ -213,7 +214,7 @@ class TextMelDataset(torch.utils.data.Dataset):
         )
         return mel
 
-    def get_text(self, text: str, add_blank: bool=True):
+    def get_text(self, text: str, add_blank: bool = True):
         text_norm, cleaned_text = self.cleaner.text_to_sequence(text)
         if self.add_blank:
             text_norm = intersperse(text_norm, 0)

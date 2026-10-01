@@ -5,7 +5,7 @@ The benefit of this abstraction is that all the logic outside of model definitio
 
 import inspect
 from abc import ABC
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import torch
 from lightning import LightningModule
@@ -13,23 +13,25 @@ from lightning.pytorch.utilities import grad_norm
 
 from matcha import utils
 from matcha.utils.utils import plot_tensor
+from .common import DataStatisTics
 
 log = utils.get_pylogger(__name__)
 
 
 class BaseLightningClass(LightningModule, ABC):
-    def update_data_statistics(self, data_statistics):
+    def update_data_statistics(self, data_statistics: Optional[DataStatisTics]):
         if data_statistics is None:
-            data_statistics = {
-                "mel_mean": 0.0,
-                "mel_std": 1.0,
-            }
+            data_statistics = DataStatisTics(mel_mean=0.0, mel_std=1.0)
 
-        self.register_buffer("mel_mean", torch.tensor(data_statistics["mel_mean"]))
-        self.register_buffer("mel_std", torch.tensor(data_statistics["mel_std"]))
+        self.register_buffer("mel_mean", torch.tensor(data_statistics.mel_mean))
+        self.register_buffer("mel_std", torch.tensor(data_statistics.mel_std))
 
     def configure_optimizers(self) -> Any:
-        optimizer = torch.optim.Adam(params=self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)  # ty: ignore[unresolved-attribute]
+        optimizer = torch.optim.Adam(
+            params=self.parameters(),
+            lr=self.hparams.lr,  # ty: ignore[unresolved-attribute]
+            weight_decay=self.hparams.weight_decay,  # ty: ignore[unresolved-attribute]
+        )
         if self.hparams.scheduler not in (None, {}):  # ty: ignore[unresolved-attribute]
             scheduler_args = {}
             # Manage last epoch for exponential schedulers
@@ -89,7 +91,7 @@ class BaseLightningClass(LightningModule, ABC):
             prog_bar=True,
             logger=True,
             sync_dist=True,
-            batch_size=self.hparams.get('batch_size')
+            batch_size=self.hparams.get("batch_size"),
         )
 
         self.log(
@@ -99,7 +101,7 @@ class BaseLightningClass(LightningModule, ABC):
             on_epoch=True,
             logger=True,
             sync_dist=True,
-            batch_size=self.hparams.get('batch_size')
+            batch_size=self.hparams.get("batch_size"),
         )
         self.log(
             "sub_loss/train_prior_loss",
@@ -108,7 +110,7 @@ class BaseLightningClass(LightningModule, ABC):
             on_epoch=True,
             logger=True,
             sync_dist=True,
-            batch_size=self.hparams.get('batch_size')
+            batch_size=self.hparams.get("batch_size"),
         )
         self.log(
             "sub_loss/train_diff_loss",
@@ -117,7 +119,7 @@ class BaseLightningClass(LightningModule, ABC):
             on_epoch=True,
             logger=True,
             sync_dist=True,
-            batch_size=self.hparams.get('batch_size')
+            batch_size=self.hparams.get("batch_size"),
         )
 
         total_loss = sum(loss_dict.values())
@@ -129,10 +131,13 @@ class BaseLightningClass(LightningModule, ABC):
             logger=True,
             prog_bar=True,
             sync_dist=True,
-            batch_size=self.hparams.get('batch_size')
+            batch_size=self.hparams.get("batch_size"),
         )
 
         return {"loss": total_loss, "log": loss_dict}
+
+    def test_step(self, batch: Any, batch_idx: int):
+        self.log("accuracy", 0)
 
     def validation_step(self, batch: Any, batch_idx: int):
         loss_dict = self.get_losses(batch)
@@ -143,7 +148,7 @@ class BaseLightningClass(LightningModule, ABC):
             on_epoch=True,
             logger=True,
             sync_dist=True,
-            batch_size=self.hparams.get('batch_size')
+            batch_size=self.hparams.get("batch_size"),
         )
         self.log(
             "sub_loss/val_prior_loss",
@@ -152,7 +157,7 @@ class BaseLightningClass(LightningModule, ABC):
             on_epoch=True,
             logger=True,
             sync_dist=True,
-            batch_size=self.hparams.get('batch_size')
+            batch_size=self.hparams.get("batch_size"),
         )
         self.log(
             "sub_loss/val_diff_loss",
@@ -161,7 +166,7 @@ class BaseLightningClass(LightningModule, ABC):
             on_epoch=True,
             logger=True,
             sync_dist=True,
-            batch_size=self.hparams.get('batch_size')
+            batch_size=self.hparams.get("batch_size"),
         )
 
         total_loss = sum(loss_dict.values())
@@ -173,7 +178,7 @@ class BaseLightningClass(LightningModule, ABC):
             logger=True,
             prog_bar=True,
             sync_dist=True,
-            batch_size=self.hparams.get('batch_size')
+            batch_size=self.hparams.get("batch_size"),
         )
 
         return total_loss

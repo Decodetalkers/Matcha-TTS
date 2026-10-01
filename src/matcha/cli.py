@@ -1,3 +1,4 @@
+from typing import Optional, List, Tuple
 import argparse
 import datetime as dt
 import os
@@ -14,7 +15,7 @@ from matcha.hifigan.denoiser import Denoiser
 from matcha.hifigan.env import AttrDict
 from matcha.hifigan.models import Generator as HiFiGAN
 from matcha.models.matcha_tts import MatchaTTS
-from matcha.text import sequence_to_text, text_to_sequence
+from matcha.text import sequence_to_text, Cleaner
 from matcha.utils.utils import assert_model_downloaded, get_user_data_dir, intersperse
 
 MATCHA_URLS = {
@@ -41,7 +42,7 @@ SINGLESPEAKER_MODEL = {
 }
 
 
-def plot_spectrogram_to_numpy(spectrogram, filename):
+def plot_spectrogram_to_numpy(spectrogram: np.ndarray, filename: str):
     fig, ax = plt.subplots(figsize=(12, 3))
     im = ax.imshow(spectrogram, aspect="auto", origin="lower", interpolation="none")
     plt.colorbar(im, ax=ax)
@@ -52,10 +53,13 @@ def plot_spectrogram_to_numpy(spectrogram, filename):
     plt.savefig(filename)
 
 
+CLEANER = Cleaner(["EnglishCleaner2"])
+
+
 def process_text(i: int, text: str, device: torch.device | str):
     print(f"[{i}] - Input text: {text}")
     x = torch.tensor(
-        intersperse(text_to_sequence(text, ["english_cleaners2"])[0], 0),
+        intersperse(CLEANER.text_to_sequence(text)[0], 0),
         dtype=torch.long,
         device=device,
     )[None]
@@ -66,7 +70,7 @@ def process_text(i: int, text: str, device: torch.device | str):
     return {"x_orig": text, "x": x, "x_lengths": x_lengths, "x_phones": x_phones}
 
 
-def get_texts(args):
+def get_texts(args) -> List[str]:
     if args.text:
         texts = [args.text]
     else:
@@ -88,7 +92,7 @@ def assert_required_models_available(args):
     return {"matcha": model_path, "vocoder": vocoder_path}
 
 
-def load_hifigan(checkpoint_path, device):
+def load_hifigan(checkpoint_path: str | Path, device: str | torch.device):
     h = AttrDict(v1)
     hifigan = HiFiGAN(h).to(device)
     hifigan.load_state_dict(
@@ -99,9 +103,10 @@ def load_hifigan(checkpoint_path, device):
     return hifigan
 
 
-def load_vocoder(vocoder_name, checkpoint_path, device):
+def load_vocoder(
+    vocoder_name: str, checkpoint_path: str | Path, device: str | torch.device
+) -> Tuple[torch.nn.Module, Denoiser]:
     print(f"[!] Loading {vocoder_name}!")
-    vocoder = None
     if vocoder_name in ("hifigan_T2_v1", "hifigan_univ_v1"):
         vocoder = load_hifigan(checkpoint_path, device)
     else:
@@ -114,7 +119,9 @@ def load_vocoder(vocoder_name, checkpoint_path, device):
     return vocoder, denoiser
 
 
-def load_matcha(model_name, checkpoint_path, device):
+def load_matcha(
+    model_name: str, checkpoint_path: str | Path, device: str | torch.device
+) -> MatchaTTS:
     print(f"[!] Loading {model_name}!")
     model = MatchaTTS.load_from_checkpoint(checkpoint_path, map_location=device)
     _ = model.eval()
@@ -123,7 +130,12 @@ def load_matcha(model_name, checkpoint_path, device):
     return model
 
 
-def to_waveform(mel, vocoder, denoiser=None, denoiser_strength=0.00025):
+def to_waveform(
+    mel: torch.Tensor,
+    vocoder: torch.nn.Module,
+    denoiser: Optional[torch.nn.Module] = None,
+    denoiser_strength: float = 0.00025,
+) -> torch.Tensor:
     audio = vocoder(mel).clamp(-1, 1)
     if denoiser is not None:
         audio = denoiser(audio.squeeze(), strength=denoiser_strength).cpu().squeeze()
@@ -324,7 +336,7 @@ class BatchedSynthesisDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.processed_texts)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int):
         return self.processed_texts[index]
 
 
@@ -341,7 +353,15 @@ def batched_collate_fn(batch):
     return {"x": x, "x_lengths": x_lengths}
 
 
-def batched_synthesis(args, device, model, vocoder, denoiser, texts, spk):
+def batched_synthesis(
+    args,
+    device: str | torch.device,
+    model: MatchaTTS,
+    vocoder: torch.nn.Module,
+    denoiser: Denoiser,
+    texts: List[str],
+    spk: Optional[torch.Tensor],
+):
     total_rtf = []
     total_rtf_w = []
     processed_text = [process_text(i, text, "cpu") for i, text in enumerate(texts)]
@@ -397,7 +417,15 @@ def batched_synthesis(args, device, model, vocoder, denoiser, texts, spk):
     print("[🍵] Enjoy the freshly whisked 🍵 Matcha-TTS!")
 
 
-def unbatched_synthesis(args, device, model, vocoder, denoiser, texts, spk):
+def unbatched_synthesis(
+    args,
+    device: str | torch.device,
+    model: MatchaTTS,
+    vocoder: torch.nn.Module,
+    denoiser: Denoiser,
+    texts: List[str],
+    spk: Optional[torch.Tensor],
+):
     total_rtf = []
     total_rtf_w = []
     for i, text in enumerate(texts):
@@ -456,7 +484,7 @@ def print_config(args):
     print(f"\t- Speaker: {args.spk}")
 
 
-def get_device(args):
+def get_device(args) -> torch.device:
     if torch.cuda.is_available() and not args.cpu:
         print("[+] GPU Available! Using GPU")
         device = torch.device("cuda")

@@ -200,13 +200,13 @@ class ConformerWrapper(ConformerBlock):
 
     def forward(
         self,
-        hidden_states,
-        attention_mask,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        timestep=None,
+        x: torch.Tensor,
+        attention_mask: torch.Tensor,
+        encoder_hidden_states: Optional[torch.Tensor]=None,
+        encoder_attention_mask: Optional[torch.Tensor]=None,
+        timestep: Optional[torch.Tensor]=None,
     ):  # ty: ignore[invalid-method-override]
-        return super().forward(x=hidden_states, mask=attention_mask.bool())
+        return super().forward(x=x, mask=attention_mask.bool())
 
 
 class Decoder(nn.Module):
